@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Öğrenci Paneli</title>
+    
+    <script>
+        const aktifUser = JSON.parse(localStorage.getItem("user"));
+        // Eğer Admin ise ve buradaysa, saniyesinde fırlat!
+        if (aktifUser && (aktifUser.email === "admin@kutuphane.com" || aktifUser.kullaniciTipi === "PERSONEL")) {
+            // Yönlendirmeyi biraz gecikmeli yapalım ki tarayıcı algılasın
+            setTimeout(() => {
+                window.location.href = "/admin.html";
+            }, 100); 
+        }
+    </script>
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary px-4 shadow">
+    <a class="navbar-brand fw-bold" href="#"><i class="fas fa-book-reader"></i> Kütüphane</a>
+    
+    <div class="ms-auto d-flex align-items-center">
+        
+        <a id="adminButonu" href="/admin.html" class="btn btn-danger me-3 fw-bold shadow" style="display: none;">
+            <i class="fas fa-user-shield"></i> YÖNETİCİ PANELİNE GİT
+        </a>
+        <a href="/favoriler.html" class="btn btn-sm btn-outline-light me-2">
+            <i class="fas fa-heart"></i> Favoriler
+        </a>
+        <a href="/profil.html" class="btn btn-sm btn-outline-light me-2">
+            <i class="fas fa-user"></i> Profil
+        </a>
+        <a href="/istatistik.html" class="btn btn-sm btn-outline-light me-2">
+            <i class="fas fa-chart-bar"></i> İstatistikler
+        </a>
+        <span id="kullaniciAdi" class="text-white me-3 fw-bold"></span>
+        <button onclick="cikisYap()" class="btn btn-sm btn-outline-light">Çıkış</button>
+    </div>
+</nav>
+
+<div class="container mt-4">
+
+    <!-- Ceza Bilgisi Kartı -->
+    <div class="card mb-4 shadow-sm border-0" id="cezaKarti" style="display: none;">
+        <div class="card-header bg-danger text-white fw-bold">
+            <i class="fas fa-exclamation-triangle"></i> Ceza Bilgisi
+        </div>
+        <div class="card-body">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Toplam Ceza: <span id="toplamCeza" class="text-danger">0 TL</span></h5>
+                <span class="badge bg-warning text-dark" id="gecikmisKitapSayisi">0 kitap gecikmiş</span>
+            </div>
+            <div id="cezaDetaylari"></div>
+        </div>
+    </div>
+
+    <div class="card mb-4 shadow-sm border-0">
+        <div class="card-header bg-white text-primary fw-bold">
+            <i class="fas fa-shopping-bag"></i> Üzerimdeki Kitaplar
+        </div>
+        <div class="card-body bg-light" id="uzerimdekiKitaplar">
+            <div class="text-center text-muted py-3">Yükleniyor...</div>
+        </div>
+    </div>
+
+    <h5 class="mb-3 text-dark"><i class="fas fa-book-open"></i> Kitapları Keşfet</h5>
+    <input type="text" id="aramaKutusu" class="form-control mb-4 shadow-sm" placeholder="Kitap veya yazar ara..." onkeyup="kitapAra()">
+
+    <div class="row row-cols-1 row-cols-md-4 g-4" id="kitapListesi">
+        </div>
+</div>
+
+<!-- Dark Mode Toggle Button -->
+<button class="theme-toggle" onclick="toggleTheme()" title="Tema Değiştir">
+    <i class="fas fa-moon" id="themeIcon"></i>
+</button>
+
+<script>
+    // Dark Mode Toggle
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+        const icon = document.getElementById('themeIcon');
+        if (icon) {
+            icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+    }
+
+    // Sayfa yüklendiğinde tema yükle
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+    });
+</script>
+
+<script>
+    const currentUser = JSON.parse(localStorage.getItem("user"));
+
+    // Kullanıcı kontrolü
+    if (!currentUser) {
+        window.location.href = "/login.html";
+    } else {
+        document.getElementById("kullaniciAdi").innerText = "👤 " + currentUser.adSoyad;
+
+        // EĞER ADMİN İSE BUTONU GÖSTER
+        if (currentUser.email === "admin@kutuphane.com" || currentUser.kullaniciTipi === "PERSONEL") {
+            document.getElementById("adminButonu").style.display = "inline-block";
+        }
+
+        kitaplariGetir();
+        uzerimdekileriGetir();
+        cezaBilgisiniGetir();
+    }
+
+    function cikisYap() {
+        localStorage.removeItem("user");
+        window.location.href = "/login.html";
+    }
+
+    // --- KİTAPLARI LİSTELE ---
+    function kitaplariGetir() {
+        fetch('/api/kitaplar')
+            .then(res => res.json())
+            .then(data => {
+                const liste = document.getElementById("kitapListesi");
+                liste.innerHTML = "";
+                data.forEach(kitap => {
+                    let btn = kitap.musaitMi 
+                        ? `<button onclick="oduncAl(${kitap.id})" class="btn btn-warning w-100 fw-bold">Ödünç Al</button>` 
+                        : `<button class="btn btn-secondary w-100" disabled>Müsait Değil</button>`;
+                    
+                    let resim = kitap.resimUrl || "https://via.placeholder.com/150";
+
+                    liste.innerHTML += `
+                    <div class="col">
+                        <div class="card h-100 shadow-sm border-0 modern-card">
+                            <a href="/detay.html?id=${kitap.id}" style="text-decoration: none; color: inherit;">
+                                <img src="${resim}" class="card-img-top" style="height: 200px; object-fit: cover; border-radius: 8px 8px 0 0; cursor: pointer;">
+                            </a>
+                            <div class="card-body">
+                                <a href="/detay.html?id=${kitap.id}" style="text-decoration: none; color: inherit;">
+                                    <h6 class="card-title fw-bold">${kitap.ad}</h6>
+                                    <p class="card-text small text-muted">${kitap.yazar}</p>
+                                </a>
+                                ${btn.replace('btn btn-warning', 'btn btn-warning btn-modern').replace('btn btn-secondary', 'btn btn-secondary btn-modern')}
+                            </div>
+                        </div>
+                    </div>`;
+                });
+            });
+    }
+
+    function uzerimdekileriGetir() {
+        fetch(`/api/kitaplar/kullanici/${currentUser.id}`)
+            .then(res => res.json())
+            .then(data => {
+                const alan = document.getElementById("uzerimdekiKitaplar");
+                if (data.length === 0) {
+                    alan.innerHTML = '<div class="alert alert-warning m-0">Kitabın yok.</div>';
+                } else {
+                    alan.innerHTML = "";
+                    data.forEach(k => {
+                        const teslimTarihi = k.sonTeslimTarihi || 'Belirtilmemiş';
+                        // Geç teslim kontrolü
+                        let teslimBadge = '';
+                        if (k.sonTeslimTarihi) {
+                            const teslim = new Date(k.sonTeslimTarihi);
+                            const bugun = new Date();
+                            if (bugun > teslim) {
+                                teslimBadge = '<span class="badge bg-danger me-2">⚠️ Geç Teslim!</span>';
+                            } else {
+                                teslimBadge = `<span class="badge bg-info me-2">Teslim: ${teslimTarihi}</span>`;
+                            }
+                        } else {
+                            teslimBadge = `<span class="badge bg-info me-2">Teslim: ${teslimTarihi}</span>`;
+                        }
+                        
+                        alan.innerHTML += `
+                        <div class="alert alert-info mb-2" style="display: flex; justify-content: space-between; align-items: center;">
+                            <span><strong>${k.ad}</strong> - ${k.yazar}</span>
+                            <div>
+                                ${teslimBadge}
+                                <button onclick="iadeEt(${k.id})" class="btn btn-sm btn-success">
+                                    <i class="fas fa-undo"></i> İade Et
+                                </button>
+                            </div>
+                        </div>`;
+                    });
+                }
+            });
+    }
+
+    function cezaBilgisiniGetir() {
+        fetch(`/api/ceza/kullanici/${currentUser.id}`)
+            .then(res => res.json())
+            .then(data => {
+                const cezaKarti = document.getElementById("cezaKarti");
+                const toplamCeza = data.toplamCeza || 0;
+                const detaylar = data.cezaDetaylari || [];
+                const gecikmisSayisi = data.gecikmisKitapSayisi || 0;
+
+                if (toplamCeza > 0) {
+                    cezaKarti.style.display = "block";
+                    document.getElementById("toplamCeza").textContent = toplamCeza.toFixed(2) + " TL";
+                    document.getElementById("gecikmisKitapSayisi").textContent = gecikmisSayisi + " kitap gecikmiş";
+
+                    const detayAlani = document.getElementById("cezaDetaylari");
+                    detayAlani.innerHTML = "<h6 class='mb-2'>Ceza Detayları:</h6>";
+                    
+                    detaylar.forEach(detay => {
+                        detayAlani.innerHTML += `
+                        <div class="alert alert-warning mb-2">
+                            <strong>${detay.kitapAd}</strong> - ${detay.yazar}<br>
+                            <small>Geç teslim: ${detay.gecenGun} gün | Ceza: ${detay.ceza.toFixed(2)} TL</small>
+                        </div>`;
+                    });
+                    
+                    // Tarayıcı bildirimi gönder
+                    tarayiciBildirimGonder(`${gecikmisSayisi} kitabın teslim tarihi geçmiş! Toplam ceza: ${toplamCeza.toFixed(2)} TL`);
+                } else {
+                    cezaKarti.style.display = "none";
+                }
+                
+                // Teslim tarihi yaklaşan kitapları kontrol et
+                teslimTarihiYaklasanKitaplariKontrolEt();
+            })
+            .catch(error => {
+                console.error("Ceza bilgisi alınamadı:", error);
+            });
+    }
+
+    function teslimTarihiYaklasanKitaplariKontrolEt() {
+        fetch(`/api/kitaplar/kullanici/${currentUser.id}`)
+            .then(res => res.json())
+            .then(kitaplar => {
+                const bugun = new Date();
+                kitaplar.forEach(kitap => {
+                    if (kitap.sonTeslimTarihi) {
+                        const teslimTarihi = new Date(kitap.sonTeslimTarihi);
+                        const kalanGun = Math.ceil((teslimTarihi - bugun) / (1000 * 60 * 60 * 24));
+                        
+                        if (kalanGun <= 3 && kalanGun > 0) {
+                            tarayiciBildirimGonder(`${kitap.ad} kitabının teslim tarihi ${kalanGun} gün içinde!`);
+                        }
+                    }
+                });
+            })
+            .catch(error => console.error("Hata:", error));
+    }
+
+    function tarayiciBildirimGonder(mesaj) {
+        if ("Notification" in window) {
+            if (Notification.permission === "granted") {
+                new Notification("Kütüphane Bildirimi", {
+                    body: mesaj,
+                    icon: "📚"
+                });
+            } else if (Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification("Kütüphane Bildirimi", {
+                            body: mesaj,
+                            icon: "📚"
+                        });
+                    }
+                });
+            }
+        }
+    }
+
+    // Sayfa yüklendiğinde bildirim izni iste
+    if ("Notification" in window && Notification.permission === "default") {
+        Notification.requestPermission();
+    }
+
+    function oduncAl(kitapId) {
+        fetch(`/api/odunc/ver?kitapId=${kitapId}&kullaniciId=${currentUser.id}`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) {
+                    alert("Kitap ödünç alındı!");
+                    kitaplariGetir();
+                    uzerimdekileriGetir();
+                    cezaBilgisiniGetir();
+                } else {
+                    alert("Kitap ödünç alınamadı!");
+                }
+            })
+            .catch(error => {
+                console.error("Hata:", error);
+                alert("Bir hata oluştu!");
+            });
+    }
+
+    function iadeEt(kitapId) {
+        if (!confirm("Bu kitabı iade etmek istediğinize emin misiniz?")) {
+            return;
+        }
+        
+        fetch(`/api/odunc/iade?kitapId=${kitapId}`, { method: 'POST' })
+            .then(res => {
+                if (res.ok) {
+                    return res.text();
+                } else {
+                    throw new Error("İade işlemi başarısız");
+                }
+            })
+            .then(sonuc => {
+                if (sonuc === "Alındı") {
+                    alert("Kitap başarıyla iade edildi!");
+                    kitaplariGetir();
+                    uzerimdekileriGetir();
+                    cezaBilgisiniGetir();
+                } else {
+                    alert("İade işlemi sırasında bir hata oluştu!");
+                }
+            })
+            .catch(error => {
+                console.error("Hata:", error);
+                alert("Kitap iade edilemedi! Lütfen tekrar deneyin.");
+            });
+    }
+
+    function kitapAra() {
+        const aranan = document.getElementById("aramaKutusu").value.toLowerCase();
+        const kartlar = document.querySelectorAll("#kitapListesi .col");
+        kartlar.forEach(kart => {
+            const metin = kart.innerText.toLowerCase();
+            kart.style.display = metin.includes(aranan) ? "" : "none";
+        });
+    }
+</script>
+
+</body>
+</html>

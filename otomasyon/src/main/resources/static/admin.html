@@ -1,0 +1,562 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Yönetici Paneli</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-dark bg-danger px-4 shadow">
+    <span class="navbar-brand mb-0 h1"><i class="fas fa-shield-alt"></i> Kütüphane Admin Paneli</span>
+    <div class="d-flex align-items-center">
+        <span id="adminAdi" class="text-white me-3 fw-bold">Yönetici</span>
+        <a href="/login.html" class="btn btn-sm btn-outline-light ms-3">Çıkış Yap</a>
+    </div>
+</nav>
+
+<div class="container mt-4 pb-5">
+    
+    <div class="row mb-4 text-center">
+        <div class="col-md-3"><div class="card text-white bg-primary p-3"><h5>Toplam Kitap</h5><h2 id="statKitap">-</h2></div></div>
+        <div class="col-md-3"><div class="card text-white bg-success p-3"><h5>Toplam Üye</h5><h2 id="statUye">-</h2></div></div>
+        <div class="col-md-3"><div class="card text-white bg-warning text-dark p-3"><h5>Ödünçteki</h5><h2 id="statOdunc">-</h2></div></div>
+        <div class="col-md-3"><div class="card text-white bg-danger p-3"><h5>Toplam Ceza</h5><h2 id="statCeza">-</h2></div></div>
+    </div>
+
+    <!-- Email Bildirimleri -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card p-3 shadow-sm">
+                <h5 class="text-info"><i class="fas fa-envelope"></i> Email Bildirimleri</h5>
+                <div class="d-flex gap-2">
+                    <button onclick="teslimYaklasanBildirimleriGonder()" class="btn btn-info">
+                        <i class="fas fa-bell"></i> Teslim Tarihi Yaklaşan Kitaplar İçin Bildirim Gönder
+                    </button>
+                    <button onclick="topluBildirimGonder()" class="btn btn-secondary">
+                        <i class="fas fa-broadcast-tower"></i> Toplu Bildirim Gönder
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card p-3 shadow-sm mb-3">
+                <h5 class="text-danger">Yeni Kitap Ekle</h5>
+                <input type="text" id="kitapAd" class="form-control mb-2" placeholder="Kitap Adı">
+                <input type="text" id="yazarAd" class="form-control mb-2" placeholder="Yazar">
+                <input type="text" id="isbn" class="form-control mb-2" placeholder="ISBN">
+                <input type="number" id="sayfaSayisi" class="form-control mb-2" placeholder="Sayfa Sayısı">
+                <input type="number" id="yayinYili" class="form-control mb-2" placeholder="Yayın Yılı">
+                <textarea id="aciklama" class="form-control mb-2" rows="2" placeholder="Açıklama"></textarea>
+                <textarea id="ozet" class="form-control mb-2" rows="2" placeholder="Özet"></textarea>
+                <input type="text" id="resimUrl" class="form-control mb-2" placeholder="Resim Linki">
+                <button onclick="kitapEkle()" class="btn btn-danger w-100">Kaydet</button>
+            </div>
+            
+            <!-- Toplu İşlemler -->
+            <div class="card p-3 shadow-sm">
+                <h5 class="text-primary">Toplu İşlemler</h5>
+                <div class="mb-2">
+                    <label class="form-label small">Toplu Kitap Ekle (Her satıra: Kitap Adı | Yazar | Resim URL)</label>
+                    <textarea id="topluKitapGiris" class="form-control" rows="5" placeholder="Örnek:&#10;Suç ve Ceza | Dostoyevski | https://...&#10;Sefiller | Hugo | https://..."></textarea>
+                </div>
+                <button onclick="topluKitapEkle()" class="btn btn-primary w-100 mb-2">
+                    <i class="fas fa-plus-circle"></i> Toplu Ekle
+                </button>
+                <hr>
+                <div class="mb-2">
+                    <label class="form-label small">Seçili Kitapları Sil</label>
+                    <button onclick="seciliKitaplariSil()" class="btn btn-danger w-100" id="topluSilButon" disabled>
+                        <i class="fas fa-trash"></i> Seçili Kitapları Sil
+                    </button>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-8">
+            <div class="card p-3 shadow-sm">
+                <h5>Kitap Listesi</h5>
+                <div style="max-height: 300px; overflow-y: auto;">
+                    <table class="table table-hover">
+                        <thead><tr><th><input type="checkbox" id="tumunuSec" onclick="tumunuSec()"></th><th>Kapak</th><th>Kitap</th><th>Durum</th><th>Teslim Tarihi</th><th>İşlem</th></tr></thead>
+                        <tbody id="kitapListesi"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card p-3 shadow-sm">
+                <h5 class="text-primary">Kullanıcı Yönetimi</h5>
+                <table class="table table-bordered table-striped">
+                    <thead>
+                        <tr>
+                            <th>Ad Soyad</th>
+                            <th>Email</th>
+                            <th>Rolü</th>
+                            <th>Elindeki Kitaplar</th>
+                            <th>Ceza</th>
+                            <th>İşlemler</th>
+                        </tr>
+                    </thead>
+                    <tbody id="uyeListesi"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Dark Mode Toggle Button -->
+<button class="theme-toggle" onclick="toggleTheme()" title="Tema Değiştir">
+    <i class="fas fa-moon" id="themeIcon"></i>
+</button>
+
+<script>
+    // Dark Mode Toggle
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+        const icon = document.getElementById('themeIcon');
+        if (icon) {
+            icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+    }
+
+    // Sayfa yüklendiğinde tema yükle
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+    });
+
+    // Sayfa açılınca verileri çek
+    document.addEventListener("DOMContentLoaded", function() {
+        verileriGetir();
+    });
+
+    let tumKitaplar = []; // Kitapları hafızada tutalım
+
+    function verileriGetir() {
+        // 1. Önce Kitapları Çek
+        fetch('/api/kitaplar')
+            .then(res => res.json())
+            .then(kitaplar => {
+                tumKitaplar = kitaplar; // Global değişkene at
+                kitapListesiniDoldur(kitaplar);
+                istatistikGuncelle(kitaplar);
+                // 2. Kitaplar gelince Üyeleri Çek (Sıralama önemli)
+                return fetch('/api/kullanicilar');
+            })
+            .then(res => res.json())
+            .then(uyeler => {
+                uyeListesiniDoldur(uyeler);
+                document.getElementById('statUye').innerText = uyeler.length;
+            })
+            .catch(err => console.error("Veri çekme hatası:", err));
+    }
+
+    function kitapListesiniDoldur(kitaplar) {
+        const tablo = document.getElementById('kitapListesi');
+        tablo.innerHTML = "";
+        kitaplar.forEach(k => {
+            let durum = k.musaitMi ? '<span class="badge bg-success">Müsait</span>' : '<span class="badge bg-warning text-dark">Dolu</span>';
+            let btn = k.musaitMi ? `<button onclick="sil(${k.id})" class="btn btn-sm btn-outline-danger">Sil</button>` : `<button onclick="iade(${k.id})" class="btn btn-sm btn-primary">İade Al</button>`;
+            let resim = k.resimUrl || 'https://via.placeholder.com/40';
+            
+            // Teslim tarihi gösterimi ve düzenleme
+            let teslimTarihiHtml = '';
+            if (!k.musaitMi && k.sonTeslimTarihi) {
+                const teslimTarihi = k.sonTeslimTarihi.split('T')[0]; // Tarih formatını düzelt
+                teslimTarihiHtml = `
+                    <div class="d-flex align-items-center gap-2">
+                        <input type="date" id="teslimTarihi_${k.id}" value="${teslimTarihi}" class="form-control form-control-sm" style="width: 150px;">
+                        <button onclick="teslimTarihiGuncelle(${k.id})" class="btn btn-sm btn-success">
+                            <i class="fas fa-save"></i>
+                        </button>
+                    </div>
+                `;
+            } else {
+                teslimTarihiHtml = '<span class="text-muted">-</span>';
+            }
+            
+            tablo.innerHTML += `<tr>
+                <td><input type="checkbox" class="kitapSec" value="${k.id}" onchange="secimKontrol()"></td>
+                <td><img src="${resim}" width="40"></td>
+                <td>${k.ad}<br><small>${k.yazar}</small></td>
+                <td>${durum}</td>
+                <td>${teslimTarihiHtml}</td>
+                <td>${btn}</td>
+            </tr>`;
+        });
+    }
+
+    function tumunuSec() {
+        const checkbox = document.getElementById('tumunuSec');
+        const secimler = document.querySelectorAll('.kitapSec');
+        secimler.forEach(cb => cb.checked = checkbox.checked);
+        secimKontrol();
+    }
+
+    function secimKontrol() {
+        const secilen = document.querySelectorAll('.kitapSec:checked');
+        document.getElementById('topluSilButon').disabled = secilen.length === 0;
+    }
+
+    function seciliKitaplariSil() {
+        const secilen = document.querySelectorAll('.kitapSec:checked');
+        if (secilen.length === 0) {
+            alert('Lütfen silmek istediğiniz kitapları seçin!');
+            return;
+        }
+        
+        if (!confirm(`${secilen.length} kitabı silmek istediğinize emin misiniz?`)) {
+            return;
+        }
+
+        const silinecekler = Array.from(secilen).map(cb => cb.value);
+        let silinenSayisi = 0;
+        
+        silinecekler.forEach(id => {
+            fetch('/api/kitaplar/' + id, {method: 'DELETE'})
+                .then(() => silinenSayisi++)
+                .catch(() => {})
+                .finally(() => {
+                    if (silinenSayisi === silinecekler.length) {
+                        alert(`${silinenSayisi} kitap silindi!`);
+                        verileriGetir();
+                    }
+                });
+        });
+    }
+
+    function teslimYaklasanBildirimleriGonder() {
+        fetch('/api/bildirim/gonder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ tip: 'teslimYaklasan' })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert('Bildirimler gönderildi! (Konsolu kontrol edin)');
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Bildirim gönderilirken hata oluştu!');
+        });
+    }
+
+    function kullaniciDuzenle(id, adSoyad, email, tip) {
+        const yeniAdSoyad = prompt('Ad Soyad:', adSoyad);
+        if (yeniAdSoyad === null) return;
+        
+        const yeniEmail = prompt('Email:', email);
+        if (yeniEmail === null) return;
+        
+        const yeniTip = confirm('Yönetici mi? (Evet = PERSONEL, Hayır = UYE)') ? 'PERSONEL' : 'UYE';
+        
+        fetch(`/api/kullanicilar/${id}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                adSoyad: yeniAdSoyad,
+                email: yeniEmail,
+                kullaniciTipi: yeniTip
+            })
+        })
+        .then(res => res.json())
+        .then(() => {
+            alert('Kullanıcı güncellendi!');
+            verileriGetir();
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Güncelleme başarısız!');
+        });
+    }
+
+    function kullaniciSil(id) {
+        if (!confirm('Bu kullanıcıyı silmek istediğinize emin misiniz?')) {
+            return;
+        }
+        
+        fetch(`/api/kullanicilar/${id}`, {
+            method: 'DELETE'
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.basarili === "true") {
+                alert('Kullanıcı silindi!');
+                verileriGetir();
+            } else {
+                alert(data.mesaj || 'Silme işlemi başarısız!');
+            }
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Silme işlemi sırasında hata oluştu!');
+        });
+    }
+
+    function topluBildirimGonder() {
+        const konu = prompt('Bildirim Konusu:');
+        if (!konu) return;
+        
+        const mesaj = prompt('Bildirim Mesajı:');
+        if (!mesaj) return;
+
+        fetch('/api/bildirim/gonder', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ 
+                tip: 'toplu',
+                konu: konu,
+                mesaj: mesaj
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            alert('Toplu bildirim gönderildi! (Konsolu kontrol edin)');
+        })
+        .catch(error => {
+            console.error('Hata:', error);
+            alert('Bildirim gönderilirken hata oluştu!');
+        });
+    }
+
+    function topluKitapEkle() {
+        const giris = document.getElementById('topluKitapGiris').value.trim();
+        if (!giris) {
+            alert('Lütfen kitap bilgilerini girin!');
+            return;
+        }
+
+        const satirlar = giris.split('\n').filter(s => s.trim());
+        let eklenenSayisi = 0;
+        let hataSayisi = 0;
+
+        satirlar.forEach((satir, index) => {
+            const parcalar = satir.split('|').map(p => p.trim());
+            if (parcalar.length >= 2) {
+                const kitap = {
+                    ad: parcalar[0],
+                    yazar: parcalar[1],
+                    resimUrl: parcalar[2] || '',
+                    musaitMi: true
+                };
+
+                fetch('/api/kitaplar', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(kitap)
+                })
+                .then(() => {
+                    eklenenSayisi++;
+                    if (eklenenSayisi + hataSayisi === satirlar.length) {
+                        alert(`${eklenenSayisi} kitap başarıyla eklendi!`);
+                        document.getElementById('topluKitapGiris').value = '';
+                        verileriGetir();
+                    }
+                })
+                .catch(() => {
+                    hataSayisi++;
+                    if (eklenenSayisi + hataSayisi === satirlar.length) {
+                        alert(`${eklenenSayisi} kitap eklendi, ${hataSayisi} hata oluştu!`);
+                        verileriGetir();
+                    }
+                });
+            } else {
+                hataSayisi++;
+            }
+        });
+    }
+
+    function uyeListesiniDoldur(uyeler) {
+        const tablo = document.getElementById('uyeListesi');
+        tablo.innerHTML = "";
+        
+        uyeler.forEach(u => {
+            // Kullanıcının tipi (Admin/Üye)
+            let rol = (u.kullaniciTipi === 'PERSONEL') 
+                ? '<span class="badge bg-danger">Yönetici</span>' 
+                : '<span class="badge bg-info">Öğrenci</span>';
+
+            // Bu üyenin elindeki kitapları bul
+            let elindekiKitaplar = tumKitaplar.filter(k => k.oduncAlanId === u.id);
+            let kitapYazisi = "";
+            
+            if(elindekiKitaplar.length > 0) {
+                elindekiKitaplar.forEach(k => {
+                    let gecikmeBadge = '';
+                    if (k.sonTeslimTarihi) {
+                        const teslim = new Date(k.sonTeslimTarihi);
+                        const bugun = new Date();
+                        if (bugun > teslim) {
+                            const gecenGun = Math.floor((bugun - teslim) / (1000 * 60 * 60 * 24));
+                            gecikmeBadge = ` <span class="badge bg-danger">⚠️ ${gecenGun} gün geç</span>`;
+                        }
+                    }
+                    kitapYazisi += `<div class="border rounded p-1 mb-1 bg-white"><small>📘 ${k.ad}${gecikmeBadge}</small></div>`;
+                });
+            } else {
+                kitapYazisi = '<small class="text-muted">Kitap Yok</small>';
+            }
+
+            // Ceza bilgisini al
+            fetch(`/api/ceza/kullanici/${u.id}`)
+                .then(res => res.json())
+                .then(cezaData => {
+                    const ceza = cezaData.toplamCeza || 0;
+                    const cezaBadge = ceza > 0 
+                        ? `<span class="badge bg-danger">${ceza.toFixed(2)} TL</span>` 
+                        : '<span class="badge bg-success">0 TL</span>';
+                    
+                    const isAdmin = u.email === 'admin@kutuphane.com';
+                    const islemButonlari = isAdmin 
+                        ? '<span class="text-muted small">Admin</span>'
+                        : `
+                            <button onclick="kullaniciDuzenle(${u.id}, '${u.adSoyad}', '${u.email}', '${u.kullaniciTipi || 'UYE'}')" class="btn btn-sm btn-warning me-1">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="kullaniciSil(${u.id})" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                    
+                    tablo.innerHTML += `<tr>
+                        <td>${u.adSoyad}</td>
+                        <td>${u.email}</td>
+                        <td>${rol}</td>
+                        <td class="bg-light">${kitapYazisi}</td>
+                        <td>${cezaBadge}</td>
+                        <td>${islemButonlari}</td>
+                    </tr>`;
+                })
+                .catch(() => {
+                    const isAdmin = u.email === 'admin@kutuphane.com';
+                    const islemButonlari = isAdmin 
+                        ? '<span class="text-muted small">Admin</span>'
+                        : `
+                            <button onclick="kullaniciDuzenle(${u.id}, '${u.adSoyad}', '${u.email}', '${u.kullaniciTipi || 'UYE'}')" class="btn btn-sm btn-warning me-1">
+                                <i class="fas fa-edit"></i>
+                            </button>
+                            <button onclick="kullaniciSil(${u.id})" class="btn btn-sm btn-danger">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                    tablo.innerHTML += `<tr>
+                        <td>${u.adSoyad}</td>
+                        <td>${u.email}</td>
+                        <td>${rol}</td>
+                        <td class="bg-light">${kitapYazisi}</td>
+                        <td><span class="badge bg-secondary">-</span></td>
+                        <td>${islemButonlari}</td>
+                    </tr>`;
+                });
+        });
+    }
+
+    function istatistikGuncelle(kitaplar) {
+        document.getElementById('statKitap').innerText = kitaplar.length;
+        document.getElementById('statOdunc').innerText = kitaplar.filter(k => !k.musaitMi).length;
+        
+        // Toplam ceza hesapla
+        let toplamCeza = 0;
+        kitaplar.forEach(k => {
+            if (!k.musaitMi && k.sonTeslimTarihi) {
+                const teslim = new Date(k.sonTeslimTarihi);
+                const bugun = new Date();
+                if (bugun > teslim) {
+                    const gecenGun = Math.floor((bugun - teslim) / (1000 * 60 * 60 * 24));
+                    toplamCeza += gecenGun * 5;
+                }
+            }
+        });
+        document.getElementById('statCeza').innerText = toplamCeza.toFixed(2) + ' TL';
+    }
+
+    // Basit İşlemler
+    function kitapEkle() {
+        const veri = {
+            ad: document.getElementById('kitapAd').value,
+            yazar: document.getElementById('yazarAd').value,
+            isbn: document.getElementById('isbn').value,
+            sayfaSayisi: document.getElementById('sayfaSayisi').value ? parseInt(document.getElementById('sayfaSayisi').value) : null,
+            yayinYili: document.getElementById('yayinYili').value ? parseInt(document.getElementById('yayinYili').value) : null,
+            aciklama: document.getElementById('aciklama').value,
+            ozet: document.getElementById('ozet').value,
+            resimUrl: document.getElementById('resimUrl').value,
+            musaitMi: true
+        };
+        fetch('/api/kitaplar', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(veri)
+        }).then(() => { 
+            verileriGetir();
+            // Formu temizle
+            document.getElementById('kitapAd').value = '';
+            document.getElementById('yazarAd').value = '';
+            document.getElementById('isbn').value = '';
+            document.getElementById('sayfaSayisi').value = '';
+            document.getElementById('yayinYili').value = '';
+            document.getElementById('aciklama').value = '';
+            document.getElementById('ozet').value = '';
+            document.getElementById('resimUrl').value = '';
+        });
+    }
+
+    function sil(id) { fetch('/api/kitaplar/'+id, {method:'DELETE'}).then(verileriGetir); }
+    function iade(id) { fetch('/api/odunc/iade?kitapId='+id, {method:'POST'}).then(verileriGetir); }
+    
+    function teslimTarihiGuncelle(kitapId) {
+        const tarihInput = document.getElementById('teslimTarihi_' + kitapId);
+        const yeniTarih = tarihInput.value;
+        
+        if (!yeniTarih) {
+            alert('Lütfen bir tarih seçin!');
+            return;
+        }
+        
+        console.log('Güncellenecek tarih:', yeniTarih);
+        
+        fetch('/api/kitaplar/' + kitapId, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({ sonTeslimTarihi: yeniTarih })
+        })
+        .then(res => {
+            if (res.ok) {
+                return res.json();
+            } else {
+                return res.text().then(text => {
+                    throw new Error(text || 'Güncelleme başarısız!');
+                });
+            }
+        })
+        .then(data => {
+            alert('Teslim tarihi güncellendi!');
+            verileriGetir();
+        })
+        .catch(error => {
+            console.error('Hata detayı:', error);
+            alert('Güncelleme hatası: ' + error.message);
+        });
+    }
+
+</script>
+</body>
+</html>

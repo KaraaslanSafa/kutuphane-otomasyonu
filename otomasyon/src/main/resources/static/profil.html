@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>Profil</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary px-4 shadow">
+    <a class="navbar-brand fw-bold" href="#"><i class="fas fa-user"></i> Profil</a>
+    <div class="ms-auto d-flex align-items-center">
+        <a href="/index.html" class="btn btn-sm btn-outline-light me-2">
+            <i class="fas fa-home"></i> Ana Sayfa
+        </a>
+        <button onclick="cikisYap()" class="btn btn-sm btn-outline-light">Çıkış</button>
+    </div>
+</nav>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <!-- Kullanıcı Bilgileri -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="fas fa-user-circle"></i> Kullanıcı Bilgileri</h5>
+                </div>
+                <div class="card-body">
+                    <div id="kullaniciBilgileri">
+                        <div class="text-center py-3">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Şifre Değiştirme -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="fas fa-key"></i> Şifre Değiştir</h5>
+                </div>
+                <div class="card-body">
+                    <form onsubmit="event.preventDefault(); sifreDegistir();">
+                        <div class="mb-3">
+                            <label class="form-label">Eski Şifre</label>
+                            <input type="password" id="eskiSifre" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Yeni Şifre</label>
+                            <input type="password" id="yeniSifre" class="form-control" required minlength="4">
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Yeni Şifre (Tekrar)</label>
+                            <input type="password" id="yeniSifreTekrar" class="form-control" required minlength="4">
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="fas fa-save"></i> Şifreyi Değiştir
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- İşlem Geçmişi -->
+            <div class="card mb-4 shadow-sm">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="fas fa-history"></i> İşlem Geçmişi</h5>
+                </div>
+                <div class="card-body">
+                    <div id="islemGecmisi">
+                        <div class="text-center py-3">Yükleniyor...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Dark Mode Toggle Button -->
+<button class="theme-toggle" onclick="toggleTheme()" title="Tema Değiştir">
+    <i class="fas fa-moon" id="themeIcon"></i>
+</button>
+
+<script>
+    // Dark Mode Toggle
+    function toggleTheme() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+        html.setAttribute('data-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(newTheme);
+    }
+
+    function updateThemeIcon(theme) {
+        const icon = document.getElementById('themeIcon');
+        if (icon) {
+            icon.className = theme === 'dark' ? 'fas fa-sun' : 'fas fa-moon';
+        }
+    }
+
+    // Sayfa yüklendiğinde tema yükle
+    document.addEventListener('DOMContentLoaded', function() {
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        document.documentElement.setAttribute('data-theme', savedTheme);
+        updateThemeIcon(savedTheme);
+    });
+
+<script>
+    const currentUser = JSON.parse(localStorage.getItem("user"));
+
+    if (!currentUser) {
+        window.location.href = "/login.html";
+    } else {
+        kullaniciBilgileriniGetir();
+        islemGecmisiniGetir();
+    }
+
+    function cikisYap() {
+        localStorage.removeItem("user");
+        window.location.href = "/login.html";
+    }
+
+    function kullaniciBilgileriniGetir() {
+        fetch(`/api/kullanici/${currentUser.id}`)
+            .then(res => res.json())
+            .then(kullanici => {
+                const alan = document.getElementById("kullaniciBilgileri");
+                const rol = kullanici.kullaniciTipi === "PERSONEL" 
+                    ? '<span class="badge bg-danger">Yönetici</span>' 
+                    : '<span class="badge bg-info">Öğrenci</span>';
+                
+                alan.innerHTML = `
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <strong>Ad Soyad:</strong><br>
+                            <span class="text-muted">${kullanici.adSoyad || '-'}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Email:</strong><br>
+                            <span class="text-muted">${kullanici.email || '-'}</span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Kullanıcı Tipi:</strong><br>
+                            ${rol}
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <strong>Kullanıcı ID:</strong><br>
+                            <span class="text-muted">${kullanici.id || '-'}</span>
+                        </div>
+                    </div>
+                `;
+            })
+            .catch(error => {
+                console.error("Hata:", error);
+                document.getElementById("kullaniciBilgileri").innerHTML = 
+                    '<div class="alert alert-danger">Bilgiler yüklenemedi!</div>';
+            });
+    }
+
+    function sifreDegistir() {
+        const eskiSifre = document.getElementById("eskiSifre").value;
+        const yeniSifre = document.getElementById("yeniSifre").value;
+        const yeniSifreTekrar = document.getElementById("yeniSifreTekrar").value;
+
+        if (yeniSifre !== yeniSifreTekrar) {
+            alert("Yeni şifreler eşleşmiyor!");
+            return;
+        }
+
+        if (yeniSifre.length < 4) {
+            alert("Şifre en az 4 karakter olmalıdır!");
+            return;
+        }
+
+        fetch('/api/sifre-degistir', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({
+                kullaniciId: currentUser.id,
+                eskiSifre: eskiSifre,
+                yeniSifre: yeniSifre
+            })
+        })
+        .then(res => res.json())
+        .then(data => {
+            if (data.basarili === "true") {
+                alert("Şifre başarıyla değiştirildi!");
+                document.getElementById("eskiSifre").value = "";
+                document.getElementById("yeniSifre").value = "";
+                document.getElementById("yeniSifreTekrar").value = "";
+            } else {
+                alert(data.mesaj || "Şifre değiştirilemedi!");
+            }
+        })
+        .catch(error => {
+            console.error("Hata:", error);
+            alert("Bir hata oluştu!");
+        });
+    }
+
+    function islemGecmisiniGetir() {
+        fetch(`/api/loglar/kullanici/${currentUser.id}`)
+            .then(res => res.json())
+            .then(loglar => {
+                const alan = document.getElementById("islemGecmisi");
+                if (loglar.length === 0) {
+                    alan.innerHTML = '<div class="alert alert-info">Henüz işlem geçmişiniz yok.</div>';
+                } else {
+                    alan.innerHTML = '<div class="table-responsive"><table class="table table-hover"><thead><tr><th>Tarih</th><th>İşlem</th><th>Kitap</th></tr></thead><tbody>';
+                    loglar.forEach(log => {
+                        const tarih = new Date(log.tarih).toLocaleString('tr-TR');
+                        alan.innerHTML += `<tr><td>${tarih}</td><td>${log.islem}</td><td>${log.kitapAd || '-'}</td></tr>`;
+                    });
+                    alan.innerHTML += '</tbody></table></div>';
+                }
+            })
+            .catch(error => {
+                console.error("Hata:", error);
+                document.getElementById("islemGecmisi").innerHTML = 
+                    '<div class="alert alert-danger">İşlem geçmişi yüklenemedi!</div>';
+            });
+    }
+</script>
+
+</body>
+</html>
+
